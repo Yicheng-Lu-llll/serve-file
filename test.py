@@ -6,7 +6,8 @@ class helloWorld:
         self.text = "hello "
 
     async def __call__(self, http_request) -> str:
-        name = await http_request.json()
+        data = await http_request.json()
+        name = data.get("name", "world")
         return self.text + name
 
 deployment_graph = helloWorld.bind()
