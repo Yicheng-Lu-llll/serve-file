@@ -1,5 +1,5 @@
 from ray import serve
-import time
+import asyncio
 
 @serve.deployment(num_replicas=1, ray_actor_options={"num_cpus": 0.2, "num_gpus": 0})
 class helloWorld:
@@ -10,7 +10,7 @@ class helloWorld:
         data = await http_request.json()
         name = data.get("name", "world")
         sleep_duration = float(data.get("seconds", 120))
-        time.sleep(sleep_duration)
+        await asyncio.sleep(sleep_duration)
         return self.text + name
 
 deployment_graph = helloWorld.bind()
