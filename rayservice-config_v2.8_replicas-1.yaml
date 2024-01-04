@@ -18,14 +18,11 @@ spec:
         num_replicas: 1
         ray_actor_options:
           num_cpus: 1
-          resources: 
-            worker: 1
   rayClusterConfig:
-    rayVersion: '2.8.0' # should match the Ray version in the image of the containers
+    rayVersion: '2.8.0'
     headGroupSpec:
       rayStartParams:
         dashboard-host: '0.0.0.0'
-        resources: '"{\"worker\": 1}"'
       template:
         spec:
           containers:
@@ -36,31 +33,30 @@ spec:
                   value: "600"
               resources:
                 limits:
-                  cpu: 2
+                  cpu: 1
                   memory: 2Gi
                 requests:
-                  cpu: 2
+                  cpu: 1
                   memory: 2Gi
               ports:
                 - containerPort: 6379
                   name: gcs-server
-                - containerPort: 8265 # Ray dashboard
+                - containerPort: 8265
                   name: dashboard
                 - containerPort: 10001
                   name: client
                 - containerPort: 8000
                   name: serve
     workerGroupSpecs:
-      - replicas: 1
+      - replicas: 2
         minReplicas: 1
         maxReplicas: 5
         groupName: small-group
-        rayStartParams: 
-          resources: '"{\"worker\": 1}"'
+        rayStartParams: {}
         template:
           spec:
             containers:
-              - name: ray-worker # must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character (e.g. 'my-name',  or '123-abc'
+              - name: ray-worker
                 image: rayproject/ray:2.8.0
                 env:
                   - name: RAY_SERVE_PROXY_MIN_DRAINING_PERIOD_S
@@ -76,3 +72,37 @@ spec:
                   requests:
                     cpu: "1"
                     memory: "2Gi"
+---
+
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: locust-cluster
+spec:
+  rayVersion: '2.8.0'
+  headGroupSpec:
+    rayStartParams:
+      dashboard-host: '0.0.0.0'
+    template:
+      spec:
+        containers:
+        - name: ray-head
+          image: rayproject/ray:2.8.0
+          args: 
+            - "pip install locust && git clone https://github.com/ray-project/serve_workloads.git"
+          resources:
+            limits:
+              cpu: 2
+              memory: 4Gi
+            requests:
+              cpu: 2
+              memory: 4Gi
+          ports:
+          - containerPort: 6379
+            name: gcs-server
+          - containerPort: 8265
+            name: dashboard
+          - containerPort: 10001
+            name: client
