@@ -1,0 +1,108 @@
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: rayservice-sample
+spec:
+  serveConfigV2: |
+    proxy_location: EveryNode
+    applications:
+    - name: no_ops
+      route_prefix: /
+      import_path: microbenchmarks.no_ops:app_builder
+      args:
+        num_forwards: 0
+      runtime_env:
+        working_dir: https://github.com/ray-project/serve_workloads/archive/a2e2405f3117f1b4134b6924b5f44c4ff0710c00.zip
+      deployments:
+      - name: NoOp
+        num_replicas: 1
+        ray_actor_options:
+          num_cpus: 1
+  rayClusterConfig:
+    rayVersion: '2.8.0'
+    headGroupSpec:
+      rayStartParams:
+        dashboard-host: '0.0.0.0'
+      template:
+        spec:
+          containers:
+            - name: ray-head
+              image: rayproject/ray:2.8.0
+              env:
+                - name: RAY_SERVE_PROXY_MIN_DRAINING_PERIOD_S
+                  value: "600"
+              resources:
+                limits:
+                  cpu: 1
+                  memory: 2Gi
+                requests:
+                  cpu: 1
+                  memory: 2Gi
+              ports:
+                - containerPort: 6379
+                  name: gcs-server
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 10001
+                  name: client
+                - containerPort: 8000
+                  name: serve
+    workerGroupSpecs:
+      - replicas: 2
+        minReplicas: 1
+        maxReplicas: 5
+        groupName: small-group
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+              - name: ray-worker
+                image: rayproject/ray:2.8.0
+                env:
+                  - name: RAY_SERVE_PROXY_MIN_DRAINING_PERIOD_S
+                    value: "600"
+                lifecycle:
+                  preStop:
+                    exec:
+                      command: ["/bin/sh","-c","ray stop"]
+                resources:
+                  limits:
+                    cpu: "1"
+                    memory: "2Gi"
+                  requests:
+                    cpu: "1"
+                    memory: "2Gi"
+---
+
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: locust-cluster
+spec:
+  rayVersion: '2.8.0'
+  headGroupSpec:
+    rayStartParams:
+      dashboard-host: '0.0.0.0'
+    template:
+      spec:
+        containers:
+        - name: ray-head
+          image: rayproject/ray:2.8.0
+          args: 
+            - "pip install locust && git clone https://github.com/ray-project/serve_workloads.git"
+          resources:
+            limits:
+              cpu: 2
+              memory: 4Gi
+            requests:
+              cpu: 2
+              memory: 4Gi
+          ports:
+          - containerPort: 6379
+            name: gcs-server
+          - containerPort: 8265
+            name: dashboard
+          - containerPort: 10001
+            name: client
