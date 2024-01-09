@@ -19,18 +19,16 @@ spec:
         ray_actor_options:
           num_cpus: 1
   rayClusterConfig:
-    rayVersion: '2.8.0'
+    rayVersion: '2.9.0'
     headGroupSpec:
       rayStartParams:
         dashboard-host: '0.0.0.0'
+        num-cpus: '0'
       template:
         spec:
           containers:
             - name: ray-head
-              image: rayproject/ray:2.8.0
-              env:
-                - name: RAY_SERVE_PROXY_MIN_DRAINING_PERIOD_S
-                  value: "600"
+              image: rayproject/ray:2.9.0
               resources:
                 limits:
                   cpu: 1
@@ -48,7 +46,7 @@ spec:
                 - containerPort: 8000
                   name: serve
     workerGroupSpecs:
-      - replicas: 2
+      - replicas: 3
         minReplicas: 1
         maxReplicas: 5
         groupName: small-group
@@ -57,10 +55,7 @@ spec:
           spec:
             containers:
               - name: ray-worker
-                image: rayproject/ray:2.8.0
-                env:
-                  - name: RAY_SERVE_PROXY_MIN_DRAINING_PERIOD_S
-                    value: "600"
+                image: rayproject/ray:2.9.0
                 lifecycle:
                   preStop:
                     exec:
@@ -72,37 +67,3 @@ spec:
                   requests:
                     cpu: "1"
                     memory: "2Gi"
----
-
-apiVersion: ray.io/v1
-kind: RayCluster
-metadata:
-  labels:
-    controller-tools.k8s.io: "1.0"
-  name: locust-cluster
-spec:
-  rayVersion: '2.8.0'
-  headGroupSpec:
-    rayStartParams:
-      dashboard-host: '0.0.0.0'
-    template:
-      spec:
-        containers:
-        - name: ray-head
-          image: rayproject/ray:2.8.0
-          args: 
-            - "pip install locust && git clone https://github.com/ray-project/serve_workloads.git"
-          resources:
-            limits:
-              cpu: 2
-              memory: 4Gi
-            requests:
-              cpu: 2
-              memory: 4Gi
-          ports:
-          - containerPort: 6379
-            name: gcs-server
-          - containerPort: 8265
-            name: dashboard
-          - containerPort: 10001
-            name: client
