@@ -67,37 +67,3 @@ spec:
                   requests:
                     cpu: "1"
                     memory: "2Gi"
----
-
-apiVersion: ray.io/v1
-kind: RayCluster
-metadata:
-  labels:
-    controller-tools.k8s.io: "1.0"
-  name: locust-cluster
-spec:
-  rayVersion: '2.9.0'
-  headGroupSpec:
-    rayStartParams:
-      dashboard-host: '0.0.0.0'
-    template:
-      spec:
-        containers:
-        - name: ray-head
-          image: rayproject/ray:2.9.0
-          args: 
-            - "pip install locust && git clone https://github.com/ray-project/serve_workloads.git"
-          resources:
-            limits:
-              cpu: 1
-              memory: 4Gi
-            requests:
-              cpu: 1
-              memory: 4Gi
-          ports:
-          - containerPort: 6379
-            name: gcs-server
-          - containerPort: 8265
-            name: dashboard
-          - containerPort: 10001
-            name: client
